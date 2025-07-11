@@ -1,3 +1,14 @@
+# training output
+checkpoints
+logs
+
+# foundation model checkpoint
+chemeleon_mp.pt
+
+# source data
+preprocessed_data
+preprocessed_data.zip
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
