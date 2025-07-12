@@ -17,6 +17,11 @@ Then run the below script to extract the data.
 
 ## Running `CheMeleon`
 
-Set up a python envionment with `chemprop>=2.2.0`, `tensorboard`, and `ipykernel`.
+Set up a python envionment with `chemprop[hpopt]>=2.2.0`, `tensorboard`, and `ipykernel`.
 
 Fitting code for `CheMeleon` is in `main.ipynb`.
+
+The hyperparameters were determined by running `chemprop hpopt` on the first 1,000 molecules from the training data using this command:
+```bash
+chemprop hpopt --data-path kruger_pvap_1k.csv --output-dir optimization --smiles-columns smiles --from-foundation chemeleon --target-columns 'log_vp(pa)' --task-type regression --loss-function mse --split-sizes 0.8 0.199 0.001 --search-parameter-keywords ffn_num_layers ffn_hidden_dim batch_size --grad-clip 0.1 --raytune-num-samples 64
+```

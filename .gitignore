@@ -1,3 +1,7 @@
+# optimization
+chemprop_hpopt
+kruger_pvap_*.csv
+
 # training output
 checkpoints
 logs
