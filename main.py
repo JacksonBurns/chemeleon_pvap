@@ -16,6 +16,8 @@ from sklearn.preprocessing import MinMaxScaler
 from mordred import descriptors, Calculator
 from rdkit.Chem import MolFromSmiles
 
+from kruger_descriptors import broad_descriptors, confined_descriptors, geckoq_descriptors
+
 warnings.filterwarnings("ignore", r".*DataFrame\.map.*", FutureWarning)
 
 calc = Calculator(descriptors, ignore_3D=True)
@@ -32,7 +34,7 @@ if not mp_path.exists():
 
 for fname in (Path("./kruger_confined_pvap.csv"), Path("./kruger_pvap.csv"), Path("./geckoq.csv")):
     if "kruger" in fname.stem:
-        # kruger dataset
+        # kruger datasets
         df = pd.read_csv(fname, index_col="smiles")
         _train_df = df[df["split"] == "train"]
         _test_df = df[df["split"] == "test"]
@@ -42,10 +44,22 @@ for fname in (Path("./kruger_confined_pvap.csv"), Path("./kruger_pvap.csv"), Pat
         df = df.rename(columns={"pSat_Pa": "log_vp(pa)"})
         df.loc[:, "log_vp(pa)"] = np.log10(df["log_vp(pa)"])
         _train_df = df.sample(n=22_778 + 5_695, random_state=seed)
-    _test_df = df[~df.index.isin(_train_df.index)]  # 3164
-    descs = calc.pandas(map(MolFromSmiles, df.index), nproc=64, nmols=len(df), quiet=False).fill_missing().to_numpy(dtype=float)
-    # original paper scaled this whole array 0-1 ?
+        _test_df = df[~df.index.isin(_train_df.index)]  # 3164
+    # mordred
+    # descs = calc.pandas(map(MolFromSmiles, df.index), nproc=64, nmols=len(df), quiet=False).fill_missing().to_numpy(dtype=float)
+    # kruger descriptors
+    if "confined" in fname.stem:
+        descs = np.array(confined_descriptors(df.index), dtype=float)
+    elif "geckoq" in fname.stem:
+        descs = np.array(geckoq_descriptors(df.index), dtype=float)
+    else:
+        descs = np.array(broad_descriptors(df.index), dtype=float)
+    
     descriptors_lookup = {df.index[i]: descs[i, :] for i in range(len(df))}
+    n_descs = descs.shape[1]
+    # or, no descriptors at all
+    # descriptors_lookup = {df.index[i]: None for i in range(len(df))}
+    # n_descs = 0
 
     kfold = KFold(n_splits=5, shuffle=True, random_state=seed)
     splits = kfold.split(_train_df.index)
@@ -89,7 +103,7 @@ for fname in (Path("./kruger_confined_pvap.csv"), Path("./kruger_pvap.csv"), Pat
         val_loader = data.build_dataloader(val_dset, shuffle=False)
         test_loader = data.build_dataloader(test_dset, shuffle=False)
         ffn = nn.RegressionFFN(
-            input_dim=mp.output_dim + descs.shape[1],
+            input_dim=mp.output_dim + n_descs,
             hidden_dim=2_048,
             n_layers=2,
             output_transform=torch.nn.Sigmoid(),
@@ -118,7 +132,7 @@ for fname in (Path("./kruger_confined_pvap.csv"), Path("./kruger_pvap.csv"), Pat
         print(f"Fold {fold_num} MAE: {mae:.3f}")
         maes.append(mae)
 
-    with open(Path("./results_descriptors.log"), "a") as logfile:
+    with open(Path("./results_descriptors_kruger.log"), "a") as logfile:
         logfile.write(f"""
 Input Data: {fname.stem}
 

@@ -1,3 +1,7 @@
+from rdkit import Chem
+from rdkit.Chem import Descriptors
+from tqdm import tqdm
+
 smiles_features_conf = ["mass", "NumAtoms", "NumBonds", "NumSingleBonds", "NumDoubleBonds", "NumTripleBonds",
                             "NumAromBonds", "AromC", "Charge", "C", "O", "H", "carboxyle", "hydroxyl", "ester", "carbonyl",
                            'BertzCT', 'Ipc', 'TPSA', 'NHOHCount', 'MolMR','VSA_EState3', 'AvgIpc',
@@ -18,10 +22,9 @@ smiles_features_geckoq = ["mass", "NumAtoms", "NumBonds", "NumSingleBonds", "Num
                            'BertzCT', 'Ipc', 'TPSA', 'NHOHCount', 'MolMR','VSA_EState3', 'AvgIpc',
                         'VSA_EState3', 'ExactMolWt', 'HeavyAtomMolWt', 'NumHDonors', 'Chi1', 'OC-ratio']
 
-def external_process_smiles(smiles, smiles_features):
+def external_process_smiles(smiles: list[str], smiles_features: list[str]) -> list[list[float]]:
     full_output_vector = []
-    descriptor_names = [desc[0] for desc in Descriptors.descList]
-    for smil in smiles:
+    for smil in tqdm(smiles, desc="Processing SMILES"):
         mol = Chem.MolFromSmiles(smil)
         molH = Chem.AddHs(mol)
         if mol is None:
@@ -193,3 +196,12 @@ def external_process_smiles(smiles, smiles_features):
         full_output_vector.append(output_vector)
 
     return full_output_vector
+
+def confined_descriptors(smiles):
+    return external_process_smiles(smiles, smiles_features_conf)
+
+def broad_descriptors(smiles):
+    return external_process_smiles(smiles, smiles_features_broad)
+
+def geckoq_descriptors(smiles):
+    return external_process_smiles(smiles, smiles_features_geckoq)
